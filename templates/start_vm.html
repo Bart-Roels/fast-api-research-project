@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Deployed Virtual Machines</title>
+    <!-- Include Bootstrap CSS -->
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" />
+
+
+    
+</head>
+
+<body class="bg-light">
+  <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+    <a class="navbar-brand" href="#">YAML Form</a>
+    <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+    <div class="collapse navbar-collapse" id="navbarNav">
+      <ul class="navbar-nav">
+        <li class="nav-item active">
+          <a class="nav-link" href="/">Home</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="/vsphere_setting">Vcenter login</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="/create_vm">Create vm</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="/deploy_vms">Deploy vm</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="/pulumi_logs">Pulumi logs</a>
+        </li> 
+        <li class="nav-item">
+          <a class="nav-link" href="/deploy_app">Deploy app</a>
+        </li> 
+        <li class="nav-item">
+          <a class="nav-link" href="/ansible_logs">Ansible logs</a>
+        </li> 
+      </ul>
+    </div>
+  </nav>
+  
+    <div class="container mt-4">
+        <!-- Add a conditional error message -->
+        {% if not session.get('vsphere_user') or not session.get('vsphere_password') or not session.get('vsphere_server') %}
+        <div class="alert alert-danger" role="alert">
+            Please enter vSphere credentials first, before you can deploy.
+        </div>
+        {% endif %}
+        <h2>Deployed Virtual Machine</h2>
+        <ul class="list-group">
+            {% for vm in vm_data %}
+            <li class="list-group-item">
+                <h4>{{ vm['name'] }}</h4>
+                <p><strong>VM Memory:</strong> {{ vm['vm_memory'] }}</p>
+                <p><strong>VM CPUs:</strong> {{ vm['vm_cpus'] }}</p>
+                <p><strong>VM Disk Size (GB):</strong> {{ vm['vm_disk_size'] }}</p>
+                <p><strong>Disk Scrub:</strong> {{ vm['disk_scrub'] }}</p>
+                <p><strong>Disk Thin:</strong> {{ vm['disk_thin'] }}</p>
+                <p><strong>Disk Label:</strong> {{ vm['diskl_label'] }}</p>
+                <p><strong>VM Domain:</strong> {{ vm['vm_domain'] }}</p>
+                <p><strong>VM Host Name:</strong> {{ vm['vm_host_name'] }}</p>
+                <p><strong>VM IPv4 Gateway:</strong> {{ vm['vm_ipv4_gateway'] }}</p>
+                <p><strong>VM IPv4 Netmask:</strong> {{ vm['vm_ipv4_netmask'] }}</p>
+                <p><strong>VM IPv4 Address:</strong> {{ vm['vm_ipv4_address'] }}</p>
+                <p><strong>VM DNS Servers:</strong> {{ vm['vm_dns_servers'] }}</p>
+                <div class="btn-group" role="group">
+                    <form action="/deploy_vms_with_pulumi" method="post">
+                        <input type="hidden" name="vm_id" value="{{ vm['id'] }}">
+                        <button type="submit" class="btn btn-primary mr-2" id="deployButton" {% if not session.get('vsphere_user') or not session.get('vsphere_password') or not session.get('vsphere_server') %}disabled{% endif %}>Deploy</button>                    </form>
+                    <form action="/delete_vm" method="post">
+                        <input type="hidden" name="vm_id" value="{{ vm['id'] }}">
+                        <button type="submit" class="btn btn-danger mr-2">Delete</button>
+                    </form>
+                    <form action="/run_ansible_playbook">
+                        <input type="hidden" name="vm_id" value="{{ vm['id'] }}">
+                        <button type="submit" class="btn btn-success mr-2">Install docker</button>
+                    </form>
+                    <form  method="POST" action="/generate_ssh_keys">
+                      <input type="hidden" name="vm_id" value="{{ vm['id'] }}">
+                      <button type="submit" class="btn btn-success mr-2">Get github ssh keys</button>
+                  </form>
+                </div>
+            </li>
+            {% endfor %}
+        </ul>
+        
+    </div>
+
+    <!-- Include Bootstrap JS and Popper.js -->
+    <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"></script>
+
+    <script>
+        // JavaScript code to disable the Deploy button if vSphere settings are not set
+        document.addEventListener("DOMContentLoaded", function () {
+            const vsphereUser = "{{ session.get('vsphere_user') }}";
+            const vspherePassword = "{{ session.get('vsphere_password') }}";
+            const vsphereServer = "{{ session.get('vsphere_server') }}";
+            const deployButton = document.getElementById("deployButton");
+
+            if (!vsphereUser || !vspherePassword || !vsphereServer) {
+                deployButton.disabled = true;
+            }
+        });
+    </script>
+</body>
+</html>

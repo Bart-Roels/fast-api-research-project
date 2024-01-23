@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>YAML Form</title>
+    <!-- Include Bootstrap CSS -->
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" />
+  </head>
+  <body class="bg-light">
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+      <a class="navbar-brand" href="#">YAML Form</a>
+      <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+      <div class="collapse navbar-collapse" id="navbarNav">
+        <ul class="navbar-nav">
+          <li class="nav-item active">
+            <a class="nav-link" href="/">Home</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="/vsphere_setting">Vcenter login</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="/create_vm">Create vm</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="/deploy_vms">Deploy vm</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="/pulumi_logs">Pulumi logs</a>
+          </li> 
+          <li class="nav-item">
+            <a class="nav-link" href="/deploy_app">Deploy app</a>
+          </li> 
+          <li class="nav-item">
+            <a class="nav-link" href="/ansible_logs">Ansible logs</a>
+          </li> 
+        </ul>
+      </div>
+    </nav>
+  
+
+    <div class="container mt-5">
+      <div class="row">
+        <div class="col-md-6 offset-md-3">
+          <h2 class="mb-4">Deploy Application</h2>
+          <form action="/deploy_app" method="POST">
+            <div class="form-group">
+              <label for="githubUrl">GitHub URL:</label>
+              <input type="text" class="form-control" id="repo_url" name="repo_url" placeholder="Enter GitHub URL" required>
+            </div>
+            <div class="form-group">
+              <label for="githubUrl">Docker compose project name:</label>
+              <input type="text" class="form-control" id="docker_file" name="docker_file" placeholder="Enter docker compose name if empyt it uses docker-compose.yaml">
+            </div>
+            <div class="form-group">
+              <label for="dockerCompose">Docker compose project source</label>
+              <textarea class="form-control" id="docker_compose_project_src" name="docker_compose_project_src" rows="4" placeholder="Paste Docker Compose source here if the docker file is under other dir then main dir for example (MAIN/compose/) ==> Use then (compose) to specify under wich subdir the compose file is located"></textarea>
+            </div>
+            <button type="submit" class="btn btn-primary">Deploy Application</button>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- Include Bootstrap JS and Popper.js -->
+    <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"></script>
+  </body>
+</html>

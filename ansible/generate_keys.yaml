@@ -1,0 +1,41 @@
+---
+- name: Setup SSH Keys for GitHub and fetch them
+  hosts: all
+  gather_facts: yes
+
+  tasks:
+    - name: Check for existing SSH keys
+      stat:
+        path: ~/.ssh/id_rsa.pub
+      register: ssh_key_check
+
+    - name: Generate SSH key pair
+      command: ssh-keygen -t rsa -b 4096 -C "your_email@example.com" -N "" -f ~/.ssh/id_rsa
+      when: ssh_key_check.stat.exists == False
+
+    - name: Start ssh-agent
+      shell: |
+        if [ -z "$SSH_AGENT_PID" ]; then
+          eval $(ssh-agent -s)
+        fi
+      args:
+        executable: /bin/bash
+      register: ssh_agent_output
+
+    - name: Add SSH key to ssh-agent
+      shell: ssh-add ~/.ssh/id_rsa
+      environment:
+        SSH_AUTH_SOCK: "{{ (ssh_agent_output.stdout_lines | select('match', 'SSH_AUTH_SOCK=.*; export SSH_AUTH_SOCK;') | list | first).split(';')[0].split('=')[1] }}"
+      when: ssh_key_check.stat.exists == False
+
+    - name: Copy SSH public key to a specific location on remote
+      copy:
+        src: "~/.ssh/id_rsa.pub"
+        dest: "/tmp/ssh_key_rsa.pub"
+        remote_src: yes
+
+    - name: Fetch SSH public key to control node
+      fetch:
+        src: "/tmp/ssh_key_rsa.pub"
+        dest: "/tmp/ssh_key_rsa_{{ inventory_hostname }}.pub"
+        flat: yes

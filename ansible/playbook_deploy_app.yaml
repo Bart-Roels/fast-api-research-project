@@ -1,0 +1,53 @@
+---
+- name: Clone repo and run Docker Compose
+  hosts: all
+  become: true # Set become: true for all tasks by default
+  tasks:
+    - name: Clone private repository using SSH
+      git:
+        repo: "{{ repo_url }}"
+        dest: "/home/{{ ansible_user }}/app"
+        key_file: "~/.ssh/id_rsa"
+      when: repo_type == 'private'
+      become: false # Override become for this task, set it to false
+
+    - name: Clone public repository using HTTPS
+      git:
+        repo: "{{ repo_url }}"
+        dest: "/home/{{ ansible_user }}/app"
+      when: repo_type == 'public'
+      become: false # Override become for this task, set it to false
+
+    - name: Install pip3
+      apt:
+        name: python3-pip
+        state: present
+      when: ansible_os_family == "Debian"
+
+    - name: Install Docker SDK for Python
+      ansible.builtin.pip:
+        name:
+          - "docker==6.1.3"
+          - "docker-compose"
+      when: ansible_os_family == "Debian"
+
+    - name: Install docker-compose Python module
+      pip:
+        name: docker-compose
+        state: latest
+
+    - name: Run Docker Compose with a Specified File
+      docker_compose:
+        project_src: "{{ project_src }}"
+        files:
+          - "{{ docker_file }}"
+        state: present
+        build: yes
+      when: docker_file is defined and docker_file != ''
+
+    - name: Run Docker Compose with Default File
+      docker_compose:
+        project_src: "{{ project_src }}"
+        state: present
+        build: yes
+      when: docker_file is not defined or docker_file == ''

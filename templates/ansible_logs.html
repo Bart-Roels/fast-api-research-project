@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Logs</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+    <script>
+      // Connect to the server
+      console.log('Connecting to the server...');
+      var socket = io.connect('http://' + document.domain + ':' + location.port);
+      socket.on('connect', function () {
+          console.log('Connected to the server!');
+      });
+      socket.on('ansible_output', function (data) {
+          var logDiv = document.getElementById('cli-output');
+          if (data.data.task) {
+              logDiv.innerHTML += "<b>Task:</b> " + data.data.task + " - <b>Status:</b> " + (data.data.status ? "Changed" : "OK") + "<br>";
+          } else {
+              logDiv.innerHTML += data.data + '<br>';
+          }
+          logDiv.scrollTop = logDiv.scrollHeight;
+      });
+
+      socket.on('ansible_recap', function (data) {
+          var logDiv = document.getElementById('cli-output');
+          logDiv.innerHTML += "<b>Play Recap:</b><br>";
+          Object.keys(data.data).forEach(function (host) {
+              var stats = data.data[host];
+              logDiv.innerHTML += "Host: " + host + ", ok: " + stats.ok + ", changed: " + stats.changed + ", unreachable: " + stats.unreachable + ", failed: " + stats.failed + "<br>";
+          });
+          logDiv.scrollTop = logDiv.scrollHeight;
+      });
+  </script>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <a class="navbar-brand" href="#">YAML Form</a>
+        <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+          <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarNav">
+          <ul class="navbar-nav">
+            <li class="nav-item active">
+              <a class="nav-link" href="/">Home</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="/vsphere_setting">Vcenter login</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="/create_vm">Create vm</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="/deploy_vms">Deploy vm</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="/pulumi_logs">Pulumi logs</a>
+            </li> 
+            <li class="nav-item">
+              <a class="nav-link" href="/deploy_app">Deploy app</a>
+            </li> 
+            <li class="nav-item">
+              <a class="nav-link" href="/ansible_logs">Ansible logs</a>
+            </li> 
+          </ul>
+        </div>
+      </nav>
+    <!-- ... (previous body content) -->
+    <div class="container mt-5 mb-4">
+        <div class="card mt-4">
+            <div class="card-header bg-dark text-white">
+                Ansible logs
+            </div>
+            <div class="card-body" style="height: 300px; overflow-y: scroll; border: 1px solid #ddd;">
+                <pre id="cli-output"></pre>
+            </div>
+            <div class="card-footer">
+                <div class="input-group">
+                    <input type="text" id="cli-input" class="form-control" placeholder="Enter command...">
+                    <div class="input-group-append">
+                        <button class="btn btn-primary" onclick="sendCommand()">Execute</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Include Bootstrap JS and Popper.js -->
+    <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"></script>
+
+
+   
+</body>
+</html>
