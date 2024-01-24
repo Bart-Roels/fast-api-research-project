@@ -1,50 +1,78 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Logs</title>
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" />
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+    <script>
+      document.addEventListener('DOMContentLoaded', (event) => {
+        const sessionId = '{{ session_id }}';  // Use the session ID from the context
+        console.log('Session ID:', sessionId);
+        const ws = new WebSocket(`ws://${window.location.host}/ws/ansible_logs/${sessionId}`);
+
+        ws.onmessage = function (event) {
+          console.log(event.data);
+          const logDiv = document.getElementById('cli-output');
+          const message = event.data;
+          logDiv.innerHTML += message + '<br>';
+          logDiv.scrollTop = logDiv.scrollHeight; // Auto-scroll to latest log
+        };
+
+        ws.onclose = function (event) {
+          logDiv.innerHTML += '<b>Connection closed</b><br>';
+        };
+
+        ws.onerror = function (error) {
+          console.error('WebSocket error:', error);
+          logDiv.innerHTML += '<b>Error occurred</b><br>';
+        };
+
+        ws.onopen = function (event) {
+          console.log('WebSocket connection established');
+        };
+      });
+    </script>
 </head>
-<body>
-    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
-        <a class="navbar-brand" href="#">YAML Form</a>
-        <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
-          <span class="navbar-toggler-icon"></span>
-        </button>
-        <div class="collapse navbar-collapse" id="navbarNav">
-          <ul class="navbar-nav">
-            <li class="nav-item active">
-              <a class="nav-link" href="/">Home</a>
-            </li>
-            <li class="nav-item">
-              <a class="nav-link" href="/vsphere_setting">Vcenter login</a>
-            </li>
-            <li class="nav-item">
-              <a class="nav-link" href="/create_vm">Create vm</a>
-            </li>
-            <li class="nav-item">
-              <a class="nav-link" href="/deploy_vms">Deploy vm</a>
-            </li>
-            <li class="nav-item">
-              <a class="nav-link" href="/pulumi_logs">Pulumi logs</a>
-            </li> 
-            <li class="nav-item">
-              <a class="nav-link" href="/deploy_app">Deploy app</a>
-            </li> 
-            <li class="nav-item">
-              <a class="nav-link" href="/ansible_logs">Ansible logs</a>
-            </li> 
-          </ul>
-        </div>
-      </nav>
-    <!-- ... (previous body content) -->
+<body class="bg-light">
+  <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+    <a class="navbar-brand" href="#">YAML Form</a>
+    <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav" aria-controls="navbarNav"
+      aria-expanded="false" aria-label="Toggle navigation">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+    <div class="collapse navbar-collapse" id="navbarNav">
+      <ul class="navbar-nav">
+        <li class="nav-item active">
+          <a class="nav-link" href="/">Home</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="/vsphere_setting">Vcenter login</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="/create_vm">Create vm</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="/deploy_vms">Deploy vm</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="/pulumi_logs">Pulumi logs</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="/deploy_app">Deploy app</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="/ansible_logs">Ansible logs</a>
+        </li>
+      </ul>
+    </div>
+    </nav>
+  
+
     <div class="container mt-5 mb-4">
         <div class="card mt-4">
             <div class="card-header bg-dark text-white">
-                Ansible logs
+                Command Line Interface
             </div>
             <div class="card-body" style="height: 300px; overflow-y: scroll; border: 1px solid #ddd;">
                 <pre id="cli-output"></pre>
@@ -60,46 +88,6 @@
         </div>
 
     </div>
-
-<script>
-  const logDiv = document.getElementById('cli-output');
-
-
-  // Get session ID from URL query string
-  const urlParams = new URLSearchParams(window.location.search);
-  const session_id = urlParams.get('session_id');
-
-  // Check if session_id is not null
-  if (!session_id) {
-    console.error("Session ID not found in URL");
-    // Optionally, handle this case, e.g., display an error message
-  } else {
-    // Connect to WebSocket
-    const ws = new WebSocket(`ws://${window.location.host}/ws/logs/${session_id}`);
-  }
-
-  ws.onopen = function () {
-    console.log('WebSocket connection established');
-  };
-
-  ws.onmessage = function (event) {
-    const data = JSON.parse(event.data);
-    if (data.task) {
-      logDiv.innerHTML += `<b>Task:</b> ${data.task} - <b>Status:</b> ${data.status ? 'Changed' : 'OK'}<br>`;
-    } else {
-      logDiv.innerHTML += `${data}<br>`;
-    }
-    logDiv.scrollTop = logDiv.scrollHeight;
-  };
-
-  ws.onclose = function () {
-    console.log('WebSocket connection closed');
-  };
-
-  ws.onerror = function (error) {
-    console.log('WebSocket Error: ' + error.message);
-  };
-</script>
 
     <!-- Include Bootstrap JS and Popper.js -->
     <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js"></script>

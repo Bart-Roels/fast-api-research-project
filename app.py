@@ -4,6 +4,7 @@ import uuid
 import subprocess
 import os
 import json
+from flask import request
 import yaml
 from fastapi import WebSocket, WebSocketDisconnect
 from pydantic import BaseModel
@@ -49,6 +50,8 @@ active_sessions = {}
 async def websocket_endpoint(websocket: WebSocket, session_id: str):
     await websocket.accept()
     active_sessions[session_id] = websocket
+    # Print new connection
+    print(f"{Fore.GREEN}New connection: {session_id}{Style.RESET_ALL}")
     try:
         while True:
             # Keep the connection open
@@ -445,72 +448,99 @@ async def vsphere_setting_edit(request: Request):
 #
 # Ansible Section
 #
+# Generate Ansible inventory
+def generate_ansible_inventory():
+    print(f"{Fore.GREEN}Generating Ansible inventory{Style.RESET_ALL}")
+    try: 
+        # Load data from TinyDB
+        vm_data_list = load_vm_from_db()
+        # Create an empty inventory dictionary
+        inventory = {"all": {"hosts": {}, "vars": {}}}
+        # Loop through VMs in the TinyDB
+        for vm_data in vm_data_list:
+            # Add an inventory host
+            inventory["all"]["hosts"][vm_data["vm_name"]] = {
+                "ansible_host": vm_data["vm_ipv4_address"],
+                "ansible_user": "bart",
+                "ansible_ssh_pass": "bart",
+                "ansible_become_pass": "bart"
+            }
+        # Save the inventory dictionary to a json file in the Ansible directory
+        with open('ansible/inventory.json', 'w') as file:
+            json.dump(inventory, file, indent=4)
+    except Exception as e:
+        print("Error generating Ansible inventory:", e)
+        return False
 
+# WebSocket endpoint for Ansible logs
+@app.websocket("/ws/ansible_logs/{session_id}")
+async def websocket_ansible_logs(websocket: WebSocket, session_id: str):
+    await websocket.accept()
+    active_sessions[session_id] = websocket
+    try:
+        while True:
+            await websocket.receive_text()
+    except WebSocketDisconnect:
+        del active_sessions[session_id]
+
+# Async function to send messages over WebSocket
+async def send_message_async(websocket, message):
+    await websocket.send_text(message)
+
+# Ansible format event
+def format_ansible_event(event):
+    event_data = event.get('event_data', {})
+    if event['event'] == 'playbook_on_play_start':
+        return f"PLAY [{event_data.get('name', 'Unnamed Play')}] {'*' * 50}\n"
+    elif event['event'] == 'playbook_on_task_start':
+        return f"TASK [{event_data.get('task', 'Unnamed Task')}] {'*' * 55}\n"
+    elif event['event'] == 'runner_on_ok':
+        host = event_data.get('host', 'Unnamed Host')
+        return f"ok: [{host}]\n"
+    # Add more cases as needed for different event types
+    return ""
+
+# Function to run Ansible playbook and send updates to WebSocket
 def run_ansible_playbook(playbook_path, inventory_path, extra_vars, session_id):
     def event_handler(event):
-        # Process events from Ansible Runner
-        # Modify this logic as per your requirements
-        if 'event_data' in event:
-            event_data = event['event_data']
-            if 'task' in event_data and 'res' in event_data:
-                task_info = {
-                    "task": event_data['task'],
-                    "status": event_data['res'].get('changed', False),
-                    "details": event_data['res'].get('msg', ''),
-                    "timestamp": event_data.get('created', '')
-                }
-                # Emit task info to WebSocket
-                if session_id in active_sessions:
-                    active_sessions[session_id].send_text(f"Task Update: {task_info}")
-            elif 'stdout' in event_data:
-                if session_id in active_sessions:
-                    active_sessions[session_id].send_text(f"STDOUT: {event_data['stdout']}")
+        formatted_message = format_ansible_event(event)
+        if session_id in active_sessions and formatted_message:
+            websocket = active_sessions[session_id]
+            asyncio.run(send_message_async(websocket, formatted_message))
 
-        if event['event'] == 'playbook_on_stats':
-            recap = event.get('event_data', {}).get('playbook_stats', {})
-            if session_id in active_sessions:
-                active_sessions[session_id].send_text(f"Playbook Recap: {recap}")
-
-    try:
-        runner = ansible_runner.run(
-            playbook=playbook_path,
-            inventory=inventory_path,
-            extravars=extra_vars,
-            event_handler=event_handler
-        )
-        print("Playbook run status:", runner.status)
-        print("Playbook run stats:", runner.stats)
-
-        # Notify completion
-        if session_id in active_sessions:
-            active_sessions[session_id].send_text("Playbook execution completed")
-    except Exception as e:
-        print("Error running the Ansible playbook:", e)
-        # Notify error
-        if session_id in active_sessions:
-            active_sessions[session_id].send_text(f"Error: {e}")
-
+    ansible_runner.run(
+        playbook=playbook_path,
+        inventory=inventory_path,
+        extravars=extra_vars,
+        event_handler=event_handler
+    )
 
 # Route to run Ansible playbook
 @app.post("/run_ansible_playbook")
-async def run_ansible_playbook_route(background_tasks: BackgroundTasks):
+async def run_ansible_playbook_route(request: Request, background_tasks: BackgroundTasks):
+    generate_ansible_inventory()
     playbook_path = os.path.join(os.getcwd(), 'ansible', 'playbook.yml')
     inventory_path = os.path.join(os.getcwd(), 'ansible', 'inventory.json')
-    extra_vars = {}  # or any extra vars you need to pass
-
-    session_id = str(uuid.uuid4())  # Unique session ID for WebSocket communication
-
-    # Add the Ansible playbook execution as a background task
+    extra_vars = {}
+    session_id = str(uuid.uuid4())
+    print(f"{Fore.GREEN}Session ID: {session_id}{Style.RESET_ALL}")
     background_tasks.add_task(run_ansible_playbook, playbook_path, inventory_path, extra_vars, session_id)
-
-    # Redirect to the Ansible log page transfer session ID but not in the URL
     return RedirectResponse(url=f'/ansible_logs?session_id={session_id}', status_code=303)
-
 
 # Route to run ansible lgos 
 @app.get("/ansible_logs")
 async def ansible_logs(request: Request):
-    return templates.TemplateResponse("ansible_logs.html", {"request": request})
+    # Get session ID from query string
+    test = request.query_params.get('session_id')
+
+    print(f"{Fore.GREEN}Session ID FOUND IN PASSTRUE: {test}{Style.RESET_ALL}")
+
+    if(test == None):
+        test = "kaka"
+    else:
+        test = test
+
+    return templates.TemplateResponse("ansible_logs.html", {"request": request, "session_id": test})
 
 # Asnible code to deploy app
 @app.post("/deploy_app", response_class=HTMLResponse)
@@ -534,7 +564,7 @@ async def deploy_app(background_tasks: BackgroundTasks,repo_url: str = Form(...)
 
     # Run playbook as background task
     background_tasks.add_task(
-        run_ansible_playbook_async,
+        run_ansible_playbook,
         playbook_path,
         inventory_path,
         extra_vars,
@@ -542,7 +572,12 @@ async def deploy_app(background_tasks: BackgroundTasks,repo_url: str = Form(...)
     )
 
     # Render template or redirect
-    return templates.TemplateResponse("ansible_logs.html", {"request": request, "session_id": session_id})
+    return RedirectResponse(url=f'/ansible_logs?session_id={session_id}', status_code=303)
+
+# Render template for Ansible app deployment
+@app.get("/deploy_app", response_class=HTMLResponse)
+async def deploy_app(request: Request):
+    return templates.TemplateResponse("deploy_app.html", {"request": request})
 
 # Ansible code to get ssh key
 @app.post("/generate_ssh_keys", response_class=JSONResponse)
@@ -570,9 +605,14 @@ async def generate_ssh_keys(vm_id: str = Form(...)):
 
 # Ansible code to run ssh key generation playbook
 def run_ssh_key_generation_playbook(playbook_path, inventory_path):
-    r = ansible_runner.run(private_data_dir='/path/to/ansible/playbook/directory', playbook='ssh_key_gen.yml')
-    return r.status
+    def event_handler(event):
+        pass
 
+    r = ansible_runner.run(
+        playbook=playbook_path,
+        inventory=inventory_path,
+        event_handler=event_handler
+    )
 #
 # Run
 # 
