@@ -144,7 +144,6 @@ async def post_delete_vm(request: Request, vm_id: str = Form(...)):
     else:
         return templates.TemplateResponse("create_vm.html", {"request": request, "success": False, "message": "VM not found"})
 
-
 #
 # Deploy VMs page Section
 #
@@ -444,10 +443,10 @@ async def vsphere_setting_edit(request: Request):
     request.session.clear()
     return RedirectResponse(url='/vsphere_setting', status_code=303)
 
-
 #
 # Ansible Section
 #
+
 # Generate Ansible inventory
 def generate_ansible_inventory():
     print(f"{Fore.GREEN}Generating Ansible inventory{Style.RESET_ALL}")
@@ -613,6 +612,7 @@ def run_ssh_key_generation_playbook(playbook_path, inventory_path):
         inventory=inventory_path,
         event_handler=event_handler
     )
+
 #
 # Run
 # 
