@@ -1,25 +1,35 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Logs</title>
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" />
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
     <script>
-        var socket = io.connect('http://' + document.domain + ':' + location.port);
+                  document.addEventListener('DOMContentLoaded', (event) => {
+                    const sessionId = '{{ session_id }}';  // Use the session ID from the context
+                    console.log('Session ID:', sessionId);
+                    const ws = new WebSocket(`ws://${window.location.host}/ws/logs/${sessionId}`);
 
-        socket.on('pulumi_status', function (data) {
-            // Update the status on the HTML page
-            document.getElementById('pulumi_status').innerHTML = data.status;
-        });
+                    ws.onmessage = function (event) {
+                      const logDiv = document.getElementById('cli-output');
+                      const message = event.data;
+                      logDiv.innerHTML += message + '<br>';
+                      logDiv.scrollTop = logDiv.scrollHeight; // Auto-scroll to latest log
+                    };
 
-        socket.on('pulumi_log', function (data) {
-            // Append log messages to the HTML page
-            var logDiv = document.getElementById('cli-output');
-            logDiv.innerHTML += data.log_message + '<br>';
-            logDiv.scrollTop = logDiv.scrollHeight;
+                    ws.onclose = function (event) {
+                      logDiv.innerHTML += '<b>Connection closed</b><br>';
+                    };
+
+                  ws.onerror = function (error) {
+                    console.error('WebSocket error:', error);
+                    logDiv.innerHTML += '<b>Error occurred</b><br>';
+                  };
+
+                  ws.onopen = function (event) {
+                    console.log('WebSocket connection established');
+                  };
         });
     </script>
 </head>

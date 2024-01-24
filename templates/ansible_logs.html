@@ -7,33 +7,6 @@
     <title>Logs</title>
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" />
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
-    <script>
-      // Connect to the server
-      console.log('Connecting to the server...');
-      var socket = io.connect('http://' + document.domain + ':' + location.port);
-      socket.on('connect', function () {
-          console.log('Connected to the server!');
-      });
-      socket.on('ansible_output', function (data) {
-          var logDiv = document.getElementById('cli-output');
-          if (data.data.task) {
-              logDiv.innerHTML += "<b>Task:</b> " + data.data.task + " - <b>Status:</b> " + (data.data.status ? "Changed" : "OK") + "<br>";
-          } else {
-              logDiv.innerHTML += data.data + '<br>';
-          }
-          logDiv.scrollTop = logDiv.scrollHeight;
-      });
-
-      socket.on('ansible_recap', function (data) {
-          var logDiv = document.getElementById('cli-output');
-          logDiv.innerHTML += "<b>Play Recap:</b><br>";
-          Object.keys(data.data).forEach(function (host) {
-              var stats = data.data[host];
-              logDiv.innerHTML += "Host: " + host + ", ok: " + stats.ok + ", changed: " + stats.changed + ", unreachable: " + stats.unreachable + ", failed: " + stats.failed + "<br>";
-          });
-          logDiv.scrollTop = logDiv.scrollHeight;
-      });
-  </script>
 </head>
 <body>
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
@@ -88,11 +61,50 @@
 
     </div>
 
+<script>
+  const logDiv = document.getElementById('cli-output');
+
+
+  // Get session ID from URL query string
+  const urlParams = new URLSearchParams(window.location.search);
+  const session_id = urlParams.get('session_id');
+
+  // Check if session_id is not null
+  if (!session_id) {
+    console.error("Session ID not found in URL");
+    // Optionally, handle this case, e.g., display an error message
+  } else {
+    // Connect to WebSocket
+    const ws = new WebSocket(`ws://${window.location.host}/ws/logs/${session_id}`);
+  }
+
+  ws.onopen = function () {
+    console.log('WebSocket connection established');
+  };
+
+  ws.onmessage = function (event) {
+    const data = JSON.parse(event.data);
+    if (data.task) {
+      logDiv.innerHTML += `<b>Task:</b> ${data.task} - <b>Status:</b> ${data.status ? 'Changed' : 'OK'}<br>`;
+    } else {
+      logDiv.innerHTML += `${data}<br>`;
+    }
+    logDiv.scrollTop = logDiv.scrollHeight;
+  };
+
+  ws.onclose = function () {
+    console.log('WebSocket connection closed');
+  };
+
+  ws.onerror = function (error) {
+    console.log('WebSocket Error: ' + error.message);
+  };
+</script>
+
     <!-- Include Bootstrap JS and Popper.js -->
     <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js"></script>
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"></script>
-
 
    
 </body>

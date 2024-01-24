@@ -56,7 +56,7 @@
                 <p class="card-text">vCenter Server: {{ display_data.vsphere_server }}</p>
                 <p class="card-text">Allow Unverified SSL: {{ 'Yes' if display_data.vsphere_allow_unverified_ssl else 'No' }}</p>
                 <!-- Use a form with PUT method -->
-                <form method="POST" action="/vsphere_setting_eddit">
+                <form method="POST" action="/vsphere_setting_edit">
                     <button type="submit" class="btn btn-primary">Edit Settings</button>
                 </form>
             </div>
