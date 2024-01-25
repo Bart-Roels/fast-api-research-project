@@ -1,1 +1,28 @@
-{"vms": {"2": {"vm_name": "pulumi-bart", "vm_dns_servers": ["172.20.4.140", "172.20.4.141"], "vm_memory": 2048, "vm_cpus": 1, "vm_disk_size": 40, "datastore_name": "roels-bart", "network_name": "VM Network", "resource_pool_name": "Resources", "datacenter_name": "StudentDC", "template_name": "UbuntuTemplate", "disk_scrub": false, "disk_thin": true, "diskl_label": "disk0", "vm_domain": "test.local", "vm_host_name": "pulumi-bart", "vm_ipv4_gateway": "192.168.50.1", "vm_ipv4_netmask": 24, "vm_ipv4_address": "192.168.50.55", "id": "057cb1f5-5bd2-4e20-8d04-414b71c9fbca"}}}
+{
+    "vms": {
+        "1": {
+            "vm_name": "pulumi-bart",
+            "vm_dns_servers": [
+                "172.20.4.140",
+                "172.20.4.141"
+            ],
+            "vm_memory": 2048,
+            "vm_cpus": 1,
+            "vm_disk_size": 30,
+            "datastore_name": "roels-bart",
+            "network_name": "VM Network",
+            "resource_pool_name": "Resources",
+            "datacenter_name": "StudentDC",
+            "template_name": "UbuntuTemplate",
+            "disk_scrub": false,
+            "disk_thin": true,
+            "diskl_label": "disk0",
+            "vm_domain": "test.local",
+            "vm_host_name": "pulumi-bart",
+            "vm_ipv4_gateway": "192.168.50.1",
+            "vm_ipv4_netmask": 24,
+            "vm_ipv4_address": "192.168.50.55",
+            "id": "7e45eea5-ad18-43f4-9889-78159270d8f1"
+        }
+    }
+}

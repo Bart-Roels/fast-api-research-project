@@ -24,6 +24,10 @@ from pyVim.connect import SmartConnect, Disconnect
 from pyVmomi import vim
 import ssl
 
+from pyVim.connect import SmartConnect, Disconnect
+from pyVmomi import vim
+import ssl
+
 
 app = FastAPI()
 app.add_middleware(SessionMiddleware, secret_key='your_secret_key')
@@ -76,6 +80,25 @@ async def index(request: Request):
 # create vm page get
 @app.get("/create_vm", response_class=HTMLResponse)
 async def get_create_vm_page(request: Request):
+    vsphere_user = request.session.get('vsphere_user')
+    vsphere_password = request.session.get('vsphere_password')
+    vsphere_server = request.session.get('vsphere_server')
+
+    if not all([vsphere_user, vsphere_password, vsphere_server]):
+        return templates.TemplateResponse("create_vm.html", {
+            "request": request, 
+            "success": None, 
+            "message": "vSphere credentials are not set",
+            "templates": []
+        })
+
+    vm_templates = get_all_templates(vsphere_server, vsphere_user, vsphere_password)
+    return templates.TemplateResponse("create_vm.html", {
+        "request": request, 
+        "success": None, 
+        "message": None,
+        "templates": vm_templates
+    })
     vsphere_user = request.session.get('vsphere_user')
     vsphere_password = request.session.get('vsphere_password')
     vsphere_server = request.session.get('vsphere_server')
@@ -164,7 +187,11 @@ async def post_delete_vm(request: Request, vm_id: str = Form(...)):
         vm_table.remove(Query().id == vm_id)
         # Return to the create_vm page
         return RedirectResponse(url='/create_vm', status_code=303)
+        # Return to the create_vm page
+        return RedirectResponse(url='/create_vm', status_code=303)
     else:
+        # Return to the create_vm page
+        return RedirectResponse(url='/create_vm', status_code=303)
         # Return to the create_vm page
         return RedirectResponse(url='/create_vm', status_code=303)
 
