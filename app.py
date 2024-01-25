@@ -4,7 +4,6 @@ import uuid
 import subprocess
 import os
 import json
-from flask import request
 import yaml
 from fastapi import WebSocket, WebSocketDisconnect
 from pydantic import BaseModel
@@ -13,7 +12,6 @@ from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
 from tinydb import TinyDB, Query
-from urllib.parse import urlparse
 import pulumi
 from pulumi import automation as auto
 import pulumi_vsphere as vsphere
@@ -23,7 +21,6 @@ from starlette.middleware.sessions import SessionMiddleware
 from pyVim.connect import SmartConnect, Disconnect
 from pyVmomi import vim
 import ssl
-
 from pyVim.connect import SmartConnect, Disconnect
 from pyVmomi import vim
 import ssl
