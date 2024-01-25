@@ -45,10 +45,10 @@
 
     <div class="container mt-4">
         <form method="POST" action="/create_vm">
-            {% if succes %}
-                <div class="alert alert-success" role="alert">
-                    {{ message }}
-                </div>
+            {% if success == True %}
+            <div class="alert alert-success" role="alert">
+                {{ message }}
+            </div>
             {% else %}
                 <div class="alert alert-danger" role="alert">
                     {{ message }}
@@ -78,7 +78,11 @@
         
             <div class="form-group">
                 <label for="template_name">Template Name:</label>
-                <input type="text" class="form-control" id="template_name" name="template_name" value="">
+                <select class="form-control" id="template_name" name="template_name">
+                    {% for template in templates %}
+                    <option value="{{ template }}">{{ template }}</option>
+                    {% endfor %}
+                </select>
             </div>
         
             <!-- Separator -->

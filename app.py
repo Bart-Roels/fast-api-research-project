@@ -20,6 +20,10 @@ import pulumi_vsphere as vsphere
 import ansible_runner
 from colorama import Fore, Style
 from starlette.middleware.sessions import SessionMiddleware
+from pyVim.connect import SmartConnect, Disconnect
+from pyVmomi import vim
+import ssl
+
 
 app = FastAPI()
 app.add_middleware(SessionMiddleware, secret_key='your_secret_key')
@@ -72,7 +76,25 @@ async def index(request: Request):
 # create vm page get
 @app.get("/create_vm", response_class=HTMLResponse)
 async def get_create_vm_page(request: Request):
-    return templates.TemplateResponse("create_vm.html", {"request": request, "success": None, "message": None})
+    vsphere_user = request.session.get('vsphere_user')
+    vsphere_password = request.session.get('vsphere_password')
+    vsphere_server = request.session.get('vsphere_server')
+
+    if not all([vsphere_user, vsphere_password, vsphere_server]):
+        return templates.TemplateResponse("create_vm.html", {
+            "request": request, 
+            "success": None, 
+            "message": "vSphere credentials are not set",
+            "templates": []
+        })
+
+    vm_templates = get_all_templates(vsphere_server, vsphere_user, vsphere_password)
+    return templates.TemplateResponse("create_vm.html", {
+        "request": request, 
+        "success": None, 
+        "message": None,
+        "templates": vm_templates
+    })
 
 # create vm page post
 @app.post("/create_vm", response_class=HTMLResponse)
@@ -140,9 +162,11 @@ async def post_delete_vm(request: Request, vm_id: str = Form(...)):
     vm_data = vm_table.search(Query().id == vm_id)
     if vm_data:
         vm_table.remove(Query().id == vm_id)
-        return templates.TemplateResponse("create_vm.html", {"request": request, "success": True, "message": "VM deleted"})
+        # Return to the create_vm page
+        return RedirectResponse(url='/create_vm', status_code=303)
     else:
-        return templates.TemplateResponse("create_vm.html", {"request": request, "success": False, "message": "VM not found"})
+        # Return to the create_vm page
+        return RedirectResponse(url='/create_vm', status_code=303)
 
 #
 # Deploy VMs page Section
@@ -411,6 +435,8 @@ async def get_pulumi_logs(request: Request):
 #
 # Vsphere settings page
 #
+
+# Get vsphere settings
 @app.get('/vsphere_setting', response_class=HTMLResponse)
 async def get_vsphere_setting(request: Request):
     display_data = {
@@ -421,6 +447,7 @@ async def get_vsphere_setting(request: Request):
     }
     return templates.TemplateResponse('vsphere_setting_config.html', {'request': request, 'display_data': display_data})
 
+# Post vsphere settings
 @app.post('/vsphere_setting')
 async def post_vsphere_setting(request: Request, 
                                vcenter_username: str = Form(...), 
@@ -438,10 +465,66 @@ async def post_vsphere_setting(request: Request,
 
     return RedirectResponse(url='/vsphere_setting', status_code=303)
 
+# Eddit vsphere settings
 @app.post('/vsphere_setting_edit')
 async def vsphere_setting_edit(request: Request):
     request.session.clear()
     return RedirectResponse(url='/vsphere_setting', status_code=303)
+
+# Function to get all vSphere templates
+def get_all_templates(vcenter_host, vcenter_user, vcenter_password):
+    templates = []
+
+    # Disabling SSL certificate verification (for demo purposes)
+    context = ssl._create_unverified_context()
+
+    # Connect to the vCenter server
+    service_instance = SmartConnect(
+        host=vcenter_host,
+        user=vcenter_user,
+        pwd=vcenter_password,
+        port=443,
+        sslContext=context
+    )
+
+    try:
+        content = service_instance.RetrieveContent()
+
+        # Iterate over all datacenters
+        for datacenter in content.rootFolder.childEntity:
+            if hasattr(datacenter, 'vmFolder'):
+                vm_folder = datacenter.vmFolder
+                vm_list = vm_folder.childEntity
+                for vm in vm_list:
+                    get_vms(vm, templates)
+
+    finally:
+        # Disconnect from the server
+        Disconnect(service_instance)
+
+    return templates
+
+# Function to get all vSphere templates
+def get_vms(entity, templates_list):
+    if isinstance(entity, vim.Folder) or isinstance(entity, vim.ResourcePool):
+        for child in entity.childEntity:
+            get_vms(child, templates_list)
+    elif isinstance(entity, vim.VirtualMachine) and entity.config.template:
+        templates_list.append(entity.name)
+
+# FastAPI route for getting VM templates
+@app.get("/vsphere_templates", response_class=JSONResponse)
+async def vsphere_templates(request: Request):
+    vsphere_user = request.session.get('vsphere_user')
+    vsphere_password = request.session.get('vsphere_password')
+    vsphere_server = request.session.get('vsphere_server')
+
+    if not all([vsphere_user, vsphere_password, vsphere_server]):
+        raise HTTPException(status_code=400, detail="vSphere credentials are not set")
+
+    templates = get_all_templates(vsphere_server, vsphere_user, vsphere_password)
+    return {"templates": templates}
+
 
 #
 # Ansible Section
@@ -543,9 +626,9 @@ async def ansible_logs(request: Request):
 
 # Asnible code to deploy app
 @app.post("/deploy_app", response_class=HTMLResponse)
-async def deploy_app(background_tasks: BackgroundTasks,repo_url: str = Form(...),docker_compose_project_src: str = Form(...),docker_file: str = Form(None)):
+async def deploy_app(background_tasks: BackgroundTasks,repo_url: str = Form(...),docker_compose_project_src: str = Form(None),docker_file: str = Form(None)):
     repo_type = 'private' if repo_url.startswith('git@github.com:') else 'public'
-    project_src = f'/home/{{{{ ansible_user }}}}/app/{docker_compose_project_src}' if docker_compose_project_src else '/home/{{{{ ansible_user }}}}/app'
+    project_src = f'/home/{{ ansible_user }}/app/{docker_compose_project_src}' if docker_compose_project_src else '/home/{{ ansible_user }}/app'
     
     generate_ansible_inventory()
 
