@@ -432,7 +432,7 @@ async def deploy_vm(request: Request):
 async def get_pulumi_logs(request: Request):
     return templates.TemplateResponse('pulumi_logs.html', {"request": request})
 
-#
+# test
 # Vsphere settings page
 #
 
