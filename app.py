@@ -549,6 +549,86 @@ async def vsphere_templates(request: Request):
     templates = get_all_templates(vsphere_server, vsphere_user, vsphere_password)
     return {"templates": templates}
 
+# Function to get VM metrics
+def get_vm_performance_metrics(vm_name, vcenter_host, vcenter_user, vcenter_password):
+    context = ssl._create_unverified_context()
+    service_instance = SmartConnect(host=vcenter_host, user=vcenter_user, pwd=vcenter_password, sslContext=context)
+    content = service_instance.RetrieveContent()
+
+    # Find the VM
+    vm = None
+    for datacenter in content.rootFolder.childEntity:
+        if vm is not None:
+            break
+        for folder in datacenter.vmFolder.childEntity:
+            if vm is not None:
+                break
+            if isinstance(folder, vim.VirtualMachine) and folder.name == vm_name:
+                vm = folder
+            elif isinstance(folder, vim.Folder):
+                for item in folder.childEntity:
+                    if isinstance(item, vim.VirtualMachine) and item.name == vm_name:
+                        vm = item
+                        break
+
+    if not vm:
+        return {"error": "VM not found"}
+
+    # Prepare to gather performance metrics
+    perf_manager = content.perfManager
+    metric_id_cpu = vim.PerformanceManager.MetricId(counterId=6, instance="")  # CPU Usage
+    metric_id_memory = vim.PerformanceManager.MetricId(counterId=33, instance="")  # Memory Usage
+
+    spec = vim.PerformanceManager.QuerySpec(maxSample=1, entity=vm, metricId=[metric_id_cpu, metric_id_memory], intervalId=20)
+    result = perf_manager.QueryPerf(querySpec=[spec])
+
+    # Extracting the values
+    cpu_usage = None
+    memory_usage = None
+    if result:
+        for val in result[0].value:
+            if val.id.counterId == 6:
+                cpu_usage = val.value[0]
+            if val.id.counterId == 33:
+                memory_usage = val.value[0]
+
+    Disconnect(service_instance)
+
+
+    memory_usage_gb = memory_usage / 1024 if memory_usage is not None else None
+
+
+    return {
+        "cpuUsage": cpu_usage,
+        "memoryUsage": memory_usage_gb
+    }
+
+
+# Pydantic model for response
+class VMPerformanceMetricsModel(BaseModel):
+    cpuUsage: float
+    memoryUsage: float
+
+# FastAPI route for getting VM metrics
+@app.get("/vm_metrics/{vm_name}", response_model=VMPerformanceMetricsModel)
+async def vm_metrics(request: Request, vm_name: str):
+    vsphere_user = request.session.get('vsphere_user')
+    vsphere_password = request.session.get('vsphere_password')
+    vsphere_server = request.session.get('vsphere_server')
+
+    if not all([vsphere_user, vsphere_password, vsphere_server]):
+        raise HTTPException(status_code=400, detail="vSphere credentials are not set")
+
+    metrics = get_vm_performance_metrics(vm_name, vsphere_server, vsphere_user, vsphere_password)
+    if "error" in metrics:
+        raise HTTPException(status_code=404, detail=metrics["error"])
+
+    return metrics
+
+# Return html page for monitoring VMs
+@app.get("/monitor_vm", response_class=HTMLResponse)
+async def monitor_vm(request: Request):
+    return templates.TemplateResponse("monitor_vm.html", {"request": request})
 
 #
 # Ansible Section

@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YAML Form</title>
+    <!-- Include Bootstrap CSS -->
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css">
+</head>
+<body class="bg-light">
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <a class="navbar-brand" href="#">YAML Form</a>
+        <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarNav">
+            <ul class="navbar-nav">
+                <li class="nav-item active">
+                    <a class="nav-link" href="/">Home</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="/vsphere_setting">Vcenter login</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="/create_vm">Create vm</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="/deploy_vms">Deploy vm</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="/pulumi_logs">Pulumi logs</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="/deploy_app">Deploy app</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="/ansible_logs">Ansible logs</a>
+                </li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        <div class="row">
+            <!-- Placeholder for CPU Usage Graph -->
+            <div class="col-md-6">
+                <h4>CPU Usage</h4>
+                <canvas id="cpuUsageChart"></canvas>
+            </div>
+
+            <!-- Placeholder for Memory Usage Gauge -->
+            <div class="col-md-6">
+                <h4>Memory Usage</h4>
+                <div id="memoryUsageGauge" style="width:100%; height:300px;"></div>
+            </div>
+        </div>
+
+        <!-- Additional placeholders for other metrics can be added here -->
+    </div>
+
+    <!-- Include Chart.js for graphs -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Raphael must be included before justgage -->
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/raphael/2.1.4/raphael-min.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/justgage/1.2.9/justgage.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"></script>
+
+    <script>
+        // Initialize CPU Usage Chart
+        const ctx = document.getElementById('cpuUsageChart').getContext('2d');
+        const cpuUsageChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: ['Time1', 'Time2', 'Time3'], // Placeholder labels
+                datasets: [{
+                    label: 'CPU Usage (%)',
+                    data: [20, 50, 75], // Placeholder data
+                    backgroundColor: 'rgba(0, 123, 255, 0.5)',
+                    borderColor: 'rgba(0, 123, 255, 1)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+
+        // Initialize Memory Usage Gauge
+        const memoryUsageGauge = new JustGage({
+            id: 'memoryUsageGauge',
+            value: 50, // Placeholder value
+            min: 0,
+            max: 100,
+            title: "Memory Usage",
+            label: "%"
+        });
+
+        function updateMetrics() {
+            const vmName = 'pulumi-pizza'; // Replace with your VM's name or a way to retrieve it dynamically
+
+            fetch(`/vm_metrics/${vmName}`)
+                .then(response => response.json())
+                .then(data => {
+                    console.log('Metrics:', data);
+
+                    // Update CPU Usage Chart with fetched data
+                    cpuUsageChart.data.datasets[0].data.push(data.cpuUsage);
+                    cpuUsageChart.data.labels.push(new Date().toLocaleTimeString()); // Add a new label with the current time
+                    if (cpuUsageChart.data.datasets[0].data.length > 10) {
+                        cpuUsageChart.data.datasets[0].data.shift(); // Remove the oldest data point
+                        cpuUsageChart.data.labels.shift(); // Remove the oldest label
+                    }
+                    cpuUsageChart.update();
+
+                    // Update Memory Usage Gauge with fetched data
+                    memoryUsageGauge.refresh(data.memoryUsage * 100 / maxMemoryGB); // Convert memory usage to percentage of max memory
+                })
+                .catch(error => console.error('Error fetching metrics:', error));
+        }
+
+        // Assuming maxMemoryGB is the total memory of the VM in GB
+        let maxMemoryGB = 8; // Replace with your VM's total memory in GB
+
+        // Update metrics every 10 seconds
+        setInterval(updateMetrics, 10000);
+    </script>
+</body>
+</html>
