@@ -379,10 +379,11 @@ def deploy_vm_with_pulumi_flfl(vm_id, vsphere_user, vsphere_password, vsphere_se
         # Stack configuration
         stack = auto.create_or_select_stack(stack_name=stack_name, project_name=project_name, program=pulumi_program)
 
-        # Pulumi refresh to get the current state
-        print("refreshing stack to get state...")
-        stack.refresh(on_output=lambda message: asyncio.run(on_output(message)))
-        print("refresh complete")
+        # Refresh the stack to align with the current state
+        print("Refreshing stack to align with the current state...")
+        refresh_res = stack.refresh(on_output=lambda message: asyncio.run(on_output(message)))
+        print("Refresh complete. Result: ", refresh_res.summary.resource_changes)
+
 
         # for inline programs, we must manage plugins ourselves
         print("installing plugins...")
