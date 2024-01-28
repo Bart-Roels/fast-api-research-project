@@ -96,25 +96,7 @@ async def get_create_vm_page(request: Request):
         "message": None,
         "templates": vm_templates
     })
-    vsphere_user = request.session.get('vsphere_user')
-    vsphere_password = request.session.get('vsphere_password')
-    vsphere_server = request.session.get('vsphere_server')
 
-    if not all([vsphere_user, vsphere_password, vsphere_server]):
-        return templates.TemplateResponse("create_vm.html", {
-            "request": request, 
-            "success": None, 
-            "message": "vSphere credentials are not set",
-            "templates": []
-        })
-
-    vm_templates = get_all_templates(vsphere_server, vsphere_user, vsphere_password)
-    return templates.TemplateResponse("create_vm.html", {
-        "request": request, 
-        "success": None, 
-        "message": None,
-        "templates": vm_templates
-    })
 
 # create vm page post
 @app.post("/create_vm", response_class=HTMLResponse)
@@ -629,6 +611,18 @@ async def vm_metrics(request: Request, vm_name: str):
 @app.get("/monitor_vm", response_class=HTMLResponse)
 async def monitor_vm(request: Request):
     return templates.TemplateResponse("monitor_vm.html", {"request": request})
+
+
+# Crate route that gets from from the vm id
+@app.post("/monitoring", response_class=HTMLResponse)
+async def get_vm_data(request: Request, vm_id: str = Form(...)):
+
+    vm_data = vm_table.search(Query().id == vm_id)
+    # Get vm_name
+    vm_name = vm_data[0]['vm_name']
+    # Render tempalte with vmhost name in url
+    return RedirectResponse(url=f'/monitor_vm?vm_name={vm_name}', status_code=303)
+
 
 #
 # Ansible Section

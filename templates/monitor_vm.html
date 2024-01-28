@@ -102,7 +102,9 @@
         });
 
         function updateMetrics() {
-            const vmName = 'pulumi-pizza'; // Replace with your VM's name or a way to retrieve it dynamically
+            // Get the name of the VM from the URL via query parameters
+            const urlParams = new URLSearchParams(window.location.search);
+            const vmName = urlParams.get('vm_name');
 
             fetch(`/vm_metrics/${vmName}`)
                 .then(response => response.json())

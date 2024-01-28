@@ -85,6 +85,10 @@
                       <input type="hidden" name="vm_id" value="{{ vm['id'] }}">
                       <button type="submit" class="btn btn-success mr-2">Get github ssh keys</button>
                   </form>
+                  <form  method="POST" action="/monitoring">
+                    <input type="hidden" name="vm_id" value="{{ vm['id'] }}">
+                    <button type="submit" class="btn btn-success mr-2">Monitor</button>
+                </form>
                 </div>
             </li>
             {% endfor %}
