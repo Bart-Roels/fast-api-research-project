@@ -392,7 +392,7 @@ def deploy_vm_with_pulumi_flfl(vm_id, vsphere_user, vsphere_password, vsphere_se
 
         # Create or select a Pulumi stack
         project_name = "inline_vsphere_project"
-        stack_name = "testing"
+        stack_name = "vsphere_stack"
 
         # Stack configuration
         stack = auto.create_or_select_stack(stack_name=stack_name, project_name=project_name, program=pulumi_program)

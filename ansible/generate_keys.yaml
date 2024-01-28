@@ -1,4 +1,3 @@
----
 - name: Setup SSH Keys for GitHub and fetch them
   hosts: all
   gather_facts: yes
@@ -26,8 +25,8 @@
     - name: Add SSH key to ssh-agent
       shell: ssh-add ~/.ssh/id_rsa
       environment:
-        SSH_AUTH_SOCK: "{{ ssh_agent_output.stdout_lines | select('search', 'SSH_AUTH_SOCK') | map('regex_replace', '.*SSH_AUTH_SOCK=([^;]+);.*', '\\1') | first }}"
-      when: ssh_key_check.stat.exists == False
+        SSH_AUTH_SOCK: "{{ ssh_agent_output.stdout_lines[0] | regex_replace('SSH_AUTH_SOCK=([^;]+);.*', '\\1') }}"
+      when: ssh_key_check.stat.exists == False and ssh_agent_output.stdout_lines | length > 0
 
     - name: Accept GitHub SSH host key
       known_hosts:
