@@ -1,7 +1,7 @@
 {
     "all": {
         "hosts": {
-            "pulumi-bart": {
+            "pulumi-demo": {
                 "ansible_host": "192.168.50.55",
                 "ansible_user": "bart",
                 "ansible_ssh_pass": "bart",

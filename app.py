@@ -670,15 +670,37 @@ async def send_message_async(websocket, message):
 # Ansible format event
 def format_ansible_event(event):
     event_data = event.get('event_data', {})
+    host = event_data.get('host', 'Unnamed Host')
+    item = event_data.get('item', '')
+    result = event_data.get('res', {})
+    msg = result.get('msg', '')
+
     if event['event'] == 'playbook_on_play_start':
-        return f"PLAY [{event_data.get('name', 'Unnamed Play')}] {'*' * 50}\n"
+        return f"PLAY [{event_data.get('name', 'Unnamed Play')}] {'*' * 49}\n\n"
     elif event['event'] == 'playbook_on_task_start':
-        return f"TASK [{event_data.get('task', 'Unnamed Task')}] {'*' * 55}\n"
+        return f"TASK [{event_data.get('task', 'Unnamed Task')}] {'*' * 59}\n"
     elif event['event'] == 'runner_on_ok':
-        host = event_data.get('host', 'Unnamed Host')
-        return f"ok: [{host}]\n"
+        return f"ok: [{host}]{f' => (item={item})' if item else ''}\n{f'{msg}' if msg else ''}\n"
+    elif event['event'] == 'runner_on_skipped':
+        return f"skipping: [{host}]{f' => (item={item})' if item else ''}\n"
+    elif event['event'] == 'runner_on_changed':
+        return f"changed: [{host}]{f' => (item={item})' if item else ''}\n"
+    elif event['event'] == 'runner_on_failed':
+        return f"fatal: [{host}]: FAILED! => {msg}\n"
+    elif event['event'] == 'playbook_on_stats':
+        return f"PLAY RECAP {'*' * 56}\n"
+    elif event['event'] == 'runner_on_unreachable':
+        return f"fatal: [{host}]: UNREACHABLE! => {msg}\n"
+    elif event['event'] == 'playbook_on_no_hosts_matched':
+        return f"skipping: no hosts matched\n"
+    elif event['event'] == 'playbook_on_no_hosts_remaining':
+        return f"skipping: no hosts remaining\n"
+    elif event['event'] == 'playbook_on_task_start':
+        return f"TASK [{event_data.get('task', 'Unnamed Task')}] {'*' * 59}\n"
+
     # Add more cases as needed for different event types
     return ""
+
 
 # Function to run Ansible playbook and send updates to WebSocket
 def run_ansible_playbook(playbook_path, inventory_path, extra_vars, session_id):
@@ -726,7 +748,7 @@ async def ansible_logs(request: Request):
 @app.post("/deploy_app", response_class=HTMLResponse)
 async def deploy_app(background_tasks: BackgroundTasks,repo_url: str = Form(...),docker_compose_project_src: str = Form(None),docker_file: str = Form(None)):
     repo_type = 'private' if repo_url.startswith('git@github.com:') else 'public'
-    project_src = f'/home/{{ ansible_user }}/app/{docker_compose_project_src}' if docker_compose_project_src else '/home/{{ ansible_user }}/app'
+    project_src = f'/home/{{{{ ansible_user }}}}/app/{docker_compose_project_src}' if docker_compose_project_src else '/home/{{ ansible_user }}/app'
     
     generate_ansible_inventory()
 
