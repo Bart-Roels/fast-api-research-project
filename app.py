@@ -26,7 +26,9 @@ from pyVmomi import vim
 import ssl
 
 
+# Iniate FastAPI
 app = FastAPI()
+# Add session middleware
 app.add_middleware(SessionMiddleware, secret_key='your_secret_key')
 
 templates = Jinja2Templates(directory="templates")
